@@ -7,6 +7,7 @@ email:{type :String, required:true, unique:true},
 password:{type :String, required:true},
 phone:{type :Number},
 role: {type:String, enum:['customer', 'provider','admin'], default:'customer'},
+isEmailVerified:{type:Boolean, default:false},
 },
 {timestamps:true});
 

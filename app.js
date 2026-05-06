@@ -6,13 +6,22 @@ const mongoSanitize = require('mongo-sanitize');
 const bodyParser = require('body-parser');
 const joi = require('joi');
 const jwt = require('jsonwebtoken');
+const nodemailer = require("nodemailer");
 
 let secretKey = "uyfwefq-d#23986235423SFGoiufa!#$@$%@#%$"
 let tokenExpiration = '30d';
 const app =  express();
 
 
-
+const transporter = nodemailer.createTransport({
+  service: "gmail",
+  auth: {
+    user: "mostafawazzany111@gmail.com",
+    pass: "vivk qhyx askn rodp", 
+  },
+});
+const user = require('./user.model');
+const Otp = require('./otp.model');
 app.use(express.json());
 app.use(morgan('dev'));
 // app.use(bodyParser.urlencoded({ extended: true }));
@@ -23,7 +32,60 @@ app.use(morgan('dev'));
 // );
 
 
-const user = require('./user.model');
+function sendTestEmail(code,email) {
+
+const message = {
+    from :"mostafawazzany111@gmail.com",
+    to:email,
+    subject:"Test Email",
+    html:`
+        <div style="font-family:Arial,sans-serif;line-height:1.7;color:#111">
+      <h2>Password Reset Code</h2>
+      <p>Hello Mostafa,</p>
+      <p>Your reset code is:</p>
+      <div style="font-size:28px;font-weight:700;letter-spacing:4px">${code}</div>
+      <p>This code expires in 5 minutes.</p>
+      <p>If you did not request this, ignore this email.</p>
+    </div
+    `
+}
+
+
+transporter.sendMail(message, (error, info) => {
+    if (error) {
+        console.error("Error sending email:", error);
+    }
+    else {
+        console.log("Email sent successfully:", info.response);
+    }
+});
+
+}
+function generateRandomCode(length = 6) {
+    const characters = '0123456789';
+    let code = '';
+    for (let i = 0; i < length; i++) {
+        code += characters.charAt(Math.floor(Math.random() * characters.length));
+    }   
+    return code;
+}
+
+
+
+async function CreateOtp(email){
+let code = generateRandomCode();
+
+otpdata = {
+    email,
+    otp: code,
+    expiresAt: new Date(Date.now() + 5 * 60 * 1000) // Expires in 5 minutes
+}
+
+
+await  Otp.create(otpdata);
+
+sendTestEmail(code,email);
+}
 
 
 
@@ -99,6 +161,8 @@ app.post('/register', async (req, res) => {
             return res.status(400).json({ success: false, message: 'Email or username already exists' });
         }
         await user.create({ fullName, username, email, password, phone, role });
+
+        await CreateOtp(email);
         res.status(201).json({ success: true, message: 'User registered successfully' });
         
     }catch (error) {
